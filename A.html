@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Attenda — Attendance Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+/* ── RESET ────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Inter',sans-serif;background:#f0f4ff;color:#0f172a;min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:#f1f5f9}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+button{font-family:'Inter',sans-serif;cursor:pointer}
+input{font-family:'Inter',sans-serif}
+input:focus{outline:none}
+
+/* ── TOKENS ───────────────────────────────────────────────────────── */
+:root{
+  --blue:#2563eb;--blue-l:#eff6ff;--blue-m:#bfdbfe;--navy:#1e3a5f;
+  --green:#16a34a;--green-l:#f0fdf4;
+  --amber:#d97706;--amber-l:#fffbeb;
+  --red:#dc2626;--red-l:#fef2f2;
+  --text:#0f172a;--sub:#475569;--muted:#94a3b8;
+  --border:#e2e8f0;--border-m:#cbd5e1;
+  --bg:#f0f4ff;--card:#fff;
+  --shadow:0 1px 4px rgba(0,0,0,.06);
+  --shadow-lg:0 8px 32px rgba(0,0,0,.14);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   PARALLAX BACKGROUND
+   ════════════════════════════════════════════════════════════════════ */
+#parallax-bg{
+  position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden
+}
+.orb{
+  position:absolute;border-radius:50%;filter:blur(70px);opacity:.35;
+  will-change:transform;transition:transform .05s linear
+}
+.orb-1{width:520px;height:520px;background:radial-gradient(circle,#93c5fd,#3b82f6);top:-120px;left:-140px}
+.orb-2{width:420px;height:420px;background:radial-gradient(circle,#a5f3fc,#06b6d4);top:30%;right:-100px}
+.orb-3{width:380px;height:380px;background:radial-gradient(circle,#c4b5fd,#8b5cf6);bottom:-80px;left:25%}
+.orb-4{width:300px;height:300px;background:radial-gradient(circle,#bbf7d0,#22c55e);bottom:20%;right:5%}
+
+/* floating dots pattern */
+.dots-canvas{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.18}
+
+/* ── HEADER ───────────────────────────────────────────────────────── */
+header{
+  background:rgba(255,255,255,.72);backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid rgba(226,232,240,.8);
+  padding:13px 24px;display:flex;align-items:center;
+  justify-content:space-between;flex-wrap:wrap;gap:10px;
+  box-shadow:0 1px 24px rgba(37,99,235,.07);
+  position:sticky;top:0;z-index:50;
+  transition:box-shadow .3s
+}
+header.scrolled{box-shadow:0 4px 32px rgba(37,99,235,.13)}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-mark{
+  width:38px;height:38px;border-radius:10px;
+  background:linear-gradient(135deg,#2563eb,#1d4ed8);
+  display:flex;align-items:center;justify-content:center;color:#fff;
+  font-size:20px;font-weight:800;flex-shrink:0;
+  box-shadow:0 4px 14px #2563eb44;
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s
+}
+.logo-mark:hover{transform:scale(1.12) rotate(-6deg);box-shadow:0 6px 20px #2563eb55}
+.logo-text{font-weight:700;font-size:18px;color:var(--text);line-height:1.1}
+.logo-sub{font-size:11px;color:var(--muted)}
+.hdr-btns{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+/* ── BUTTONS ──────────────────────────────────────────────────────── */
+.btn-primary{
+  background:linear-gradient(135deg,#2563eb,#1d4ed8);border:none;
+  border-radius:8px;color:#fff;font-size:13px;font-weight:600;
+  padding:9px 18px;box-shadow:0 2px 12px #2563eb33;
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s,opacity .12s;
+  position:relative;overflow:hidden
+}
+.btn-primary::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.25) 50%,transparent 70%);
+  transform:translateX(-100%);transition:transform .4s
+}
+.btn-primary:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 6px 22px #2563eb44}
+.btn-primary:hover::after{transform:translateX(100%)}
+.btn-primary:active{transform:translateY(0) scale(.97)}
+
+.btn-ghost{
+  background:rgba(255,255,255,.8);border:1.5px solid var(--border);border-radius:7px;
+  color:var(--sub);font-size:12px;font-weight:500;padding:6px 12px;
+  transition:transform .15s,background .15s,box-shadow .15s,border-color .15s;
+  backdrop-filter:blur(8px)
+}
+.btn-ghost:hover{background:#fff;border-color:var(--blue-m);color:var(--blue);
+  transform:translateY(-1px);box-shadow:0 4px 12px rgba(37,99,235,.1)}
+.btn-ghost:active{transform:translateY(0)}
+
+.btn-danger{
+  background:#fff;border:1.5px solid var(--red);border-radius:7px;
+  color:var(--red);font-size:13px;font-weight:600;padding:9px 0;width:100%;
+  transition:background .15s,transform .15s
+}
+.btn-danger:hover{background:var(--red-l);transform:translateY(-1px)}
+
+.btn-icon{
+  background:none;border:none;color:var(--muted);font-size:14px;
+  padding:4px 6px;border-radius:6px;
+  transition:color .15s,background .15s,transform .18s cubic-bezier(.34,1.56,.64,1)
+}
+.btn-icon:hover{background:#f1f5f9;transform:scale(1.2)}
+.btn-icon.red{color:var(--red)}
+.btn-icon.green{color:var(--green)}
+
+/* ── STATS STRIP ──────────────────────────────────────────────────── */
+#stats-strip{
+  background:rgba(255,255,255,.75);backdrop-filter:blur(14px);
+  border-bottom:1px solid rgba(226,232,240,.8);
+  padding:14px 28px;display:flex;gap:24px;flex-wrap:wrap;
+  align-items:center;display:none;
+  /* slide-down animation applied via JS */
+}
+.stat-pill{display:flex;flex-direction:column;align-items:center;gap:2px}
+.stat-val{
+  font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;
+  transition:transform .2s cubic-bezier(.34,1.56,.64,1),color .4s
+}
+.stat-val.bump{transform:scale(1.25)}
+.stat-lbl{font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap}
+.stat-divider{width:1px;height:28px;background:var(--border);align-self:center}
+
+/* ── RISK BANNER ──────────────────────────────────────────────────── */
+#risk-banner{
+  background:linear-gradient(90deg,#fef2f2,#fff0f0);
+  border-bottom:1px solid #fecaca;
+  color:var(--red);padding:10px 28px;font-size:13px;font-weight:500;
+  display:none;align-items:center;gap:8px;
+  animation:slideDown .35s ease
+}
+@keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+.risk-dot{
+  width:8px;height:8px;border-radius:50%;background:var(--red);
+  flex-shrink:0;display:inline-block;
+  animation:pulse 1.6s ease-in-out infinite
+}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 #dc262644}60%{box-shadow:0 0 0 6px transparent}}
+
+/* ── MAIN ─────────────────────────────────────────────────────────── */
+main{max-width:1200px;margin:0 auto;padding:32px 20px 80px;position:relative;z-index:1}
+.section-row{
+  display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;
+  animation:fadeUp .5s ease both
+}
+.section-title{font-weight:800;font-size:22px;color:var(--text);letter-spacing:-.3px}
+.section-sub{font-size:13px;color:var(--muted);margin-top:3px}
+
+/* ── GRID ─────────────────────────────────────────────────────────── */
+#card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:18px}
+
+/* ── EMPTY STATE ──────────────────────────────────────────────────── */
+#empty-state{
+  text-align:center;padding:80px 20px;background:rgba(255,255,255,.7);
+  border:1.5px dashed var(--border-m);border-radius:20px;
+  backdrop-filter:blur(8px);
+  animation:fadeUp .5s ease both
+}
+#empty-state .icon{font-size:52px;margin-bottom:18px;display:block;
+  animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+#empty-state h3{font-weight:700;font-size:20px;color:var(--text);margin-bottom:8px}
+#empty-state p{font-size:14px;color:var(--muted);margin-bottom:28px}
+
+/* ── SUBJECT CARD ─────────────────────────────────────────────────── */
+.sub-card{
+  background:rgba(255,255,255,.85);backdrop-filter:blur(12px);
+  border:1px solid rgba(226,232,240,.9);border-radius:16px;
+  padding:20px;
+  box-shadow:0 2px 8px rgba(0,0,0,.05),0 0 0 1px rgba(255,255,255,.6) inset;
+  display:flex;flex-direction:column;gap:14px;
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1),
+             box-shadow .25s,border-color .25s;
+  will-change:transform;
+  /* entrance animation set per card */
+  opacity:0;transform:translateY(24px) scale(.97)
+}
+.sub-card.visible{
+  animation:cardIn .45s cubic-bezier(.22,1,.36,1) forwards
+}
+@keyframes cardIn{
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.sub-card:hover{
+  transform:translateY(-5px) scale(1.01);
+  box-shadow:0 12px 40px rgba(37,99,235,.13),0 2px 8px rgba(0,0,0,.06);
+  border-color:var(--blue-m)
+}
+.sub-card:hover .logo-mark{transform:scale(1.1)}
+
+.card-header{display:flex;justify-content:space-between;align-items:flex-start}
+.card-name{font-weight:600;font-size:15px;color:var(--text);flex:1;
+  margin-right:8px;word-break:break-word;line-height:1.3}
+.card-actions{display:flex;gap:2px;flex-shrink:0}
+
+.pct-row{display:flex;align-items:flex-end;justify-content:space-between}
+.pct-badge{
+  display:inline-flex;align-items:baseline;gap:2px;padding:6px 14px;
+  border-radius:10px;transition:transform .2s cubic-bezier(.34,1.56,.64,1)
+}
+.pct-badge:hover{transform:scale(1.04)}
+.pct-num{font-size:36px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.pct-sym{font-size:16px;font-weight:700}
+.hrs-info{text-align:right}
+.hrs-val{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.hrs-val .attended{color:var(--green)}
+.hrs-val .sep{color:var(--muted);font-size:14px}
+.hrs-val .total{color:var(--sub)}
+.hrs-val .unit{font-size:12px;color:var(--muted);font-weight:400;margin-left:3px}
+.hrs-sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+.progress-wrap{height:7px;background:rgba(0,0,0,.06);border-radius:99px;position:relative;overflow:visible}
+.progress-bar{
+  height:100%;border-radius:99px;
+  transition:width .6s cubic-bezier(.22,1,.36,1);
+  position:relative;overflow:hidden
+}
+.progress-bar::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.5),transparent);
+  animation:shimmer 2.4s ease-in-out infinite
+}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(200%)}}
+.progress-marker{
+  position:absolute;top:-5px;width:2px;height:17px;
+  background:var(--muted);border-radius:1px;transform:translateX(-50%);
+  opacity:.5
+}
+
+.advice-pill{
+  display:flex;align-items:center;gap:8px;padding:9px 12px;
+  border-radius:10px;font-size:12px;font-weight:500;border:1px solid;
+  transition:transform .15s
+}
+.advice-pill:hover{transform:translateX(3px)}
+
+/* ── CUSTOM HOURS ROW ─────────────────────────────────────────────── */
+.custom-hrs-row{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(248,250,252,.9);border:1px solid var(--border);
+  border-radius:10px;padding:8px 10px;
+  transition:border-color .15s,box-shadow .15s
+}
+.custom-hrs-row:focus-within{border-color:var(--blue-m);box-shadow:0 0 0 3px #2563eb18}
+.custom-hrs-label{font-size:11px;color:var(--muted);white-space:nowrap;font-weight:500}
+.custom-hrs-controls{display:flex;align-items:center;gap:4px;flex:1}
+.step-btn{
+  width:26px;height:26px;border-radius:7px;border:1px solid var(--border);
+  background:#fff;color:var(--sub);font-size:16px;display:flex;
+  align-items:center;justify-content:center;flex-shrink:0;
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1),background .15s,border-color .15s
+}
+.step-btn:hover{background:var(--blue-l);border-color:var(--blue-m);color:var(--blue);transform:scale(1.15)}
+.step-btn:active{transform:scale(.9)}
+.hrs-input{
+  width:54px;text-align:center;border:1.5px solid var(--blue);
+  border-radius:7px;padding:3px 4px;font-size:13px;font-weight:700;
+  color:var(--blue);background:#fff;font-variant-numeric:tabular-nums;
+  transition:box-shadow .15s
+}
+.hrs-input:focus{box-shadow:0 0 0 3px #2563eb22}
+.hrs-unit{font-size:12px;color:var(--muted)}
+.reset-btn{
+  background:none;border:none;color:var(--muted);font-size:10px;
+  text-decoration:underline;white-space:nowrap;padding:0;display:none;
+  transition:color .15s
+}
+.reset-btn:hover{color:var(--blue)}
+
+.card-btns{display:flex;gap:8px}
+.btn-present{
+  flex:1;padding:9px 0;background:var(--green-l);border:1.5px solid #86efac;
+  border-radius:8px;color:var(--green);font-size:12px;font-weight:600;
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s,background .15s;
+  position:relative;overflow:hidden
+}
+.btn-present:hover{background:#dcfce7;transform:translateY(-2px);box-shadow:0 4px 14px #16a34a22}
+.btn-present:active{transform:scale(.96)}
+.btn-absent{
+  flex:1;padding:9px 0;background:var(--red-l);border:1.5px solid #fca5a5;
+  border-radius:8px;color:var(--red);font-size:12px;font-weight:600;
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1),box-shadow .18s,background .15s
+}
+.btn-absent:hover{background:#fee2e2;transform:translateY(-2px);box-shadow:0 4px 14px #dc262622}
+.btn-absent:active{transform:scale(.96)}
+
+/* ── MODAL ────────────────────────────────────────────────────────── */
+.overlay{
+  position:fixed;inset:0;background:rgba(15,23,42,.45);
+  backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;
+  z-index:100;padding:20px;
+  opacity:0;pointer-events:none;
+  transition:opacity .25s ease
+}
+.overlay.open{opacity:1;pointer-events:all}
+.overlay.open .modal{transform:translateY(0) scale(1);opacity:1}
+.modal{
+  background:rgba(255,255,255,.96);backdrop-filter:blur(24px);
+  border-radius:18px;box-shadow:var(--shadow-lg);
+  width:100%;max-width:460px;max-height:90vh;display:flex;flex-direction:column;
+  transform:translateY(20px) scale(.97);opacity:0;
+  transition:transform .3s cubic-bezier(.22,1,.36,1),opacity .3s ease;
+  border:1px solid rgba(255,255,255,.8)
+}
+.modal-hdr{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:18px 24px 16px;border-bottom:1px solid var(--border);flex-shrink:0
+}
+.modal-title{font-weight:700;font-size:16px;color:var(--text)}
+.modal-close{
+  background:none;border:none;color:var(--muted);font-size:18px;line-height:1;
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1),color .15s;
+  border-radius:6px;padding:2px 5px
+}
+.modal-close:hover{transform:rotate(90deg) scale(1.15);color:var(--red)}
+.modal-body{padding:20px 24px 28px;overflow-y:auto}
+
+/* ── FORM FIELDS ──────────────────────────────────────────────────── */
+.field{margin-bottom:16px}
+.field label{
+  display:block;font-size:12px;font-weight:600;color:var(--sub);
+  margin-bottom:6px;letter-spacing:.3px;
+  transition:color .15s
+}
+.field:focus-within label{color:var(--blue)}
+.field input[type=text],.field input[type=number],.field input[type=date]{
+  width:100%;background:#fff;border:1.5px solid var(--border);border-radius:9px;
+  color:var(--text);font-size:14px;padding:9px 12px;
+  transition:border-color .2s,box-shadow .2s,transform .15s
+}
+.field input:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb18;transform:translateY(-1px)}
+.field .hint{font-size:11px;color:var(--muted);margin-top:4px}
+.field .warn{font-size:11px;color:var(--amber);margin-top:4px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-btns{display:flex;gap:10px;margin-top:8px}
+.form-btns button{flex:1}
+.form-sep{margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* ── HOLIDAY LIST ─────────────────────────────────────────────────── */
+.holiday-add{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.holiday-add input{
+  flex:1;min-width:100px;background:#fff;border:1.5px solid var(--border);
+  border-radius:9px;color:var(--text);font-size:14px;padding:9px 12px;
+  transition:border-color .2s,box-shadow .2s
+}
+.holiday-add input:focus{border-color:var(--blue);box-shadow:0 0 0 3px #2563eb18;outline:none}
+.holiday-item{
+  display:flex;align-items:center;padding:10px 0;
+  border-bottom:1px solid var(--border);
+  transition:background .15s,padding-left .15s
+}
+.holiday-item:hover{background:#f8fafc;padding-left:6px;border-radius:6px}
+.holiday-date{font-size:12px;color:#7c3aed;min-width:90px;font-variant-numeric:tabular-nums}
+.holiday-label{flex:1;font-size:13px;color:var(--text);margin-left:16px}
+.holiday-empty{text-align:center;padding:28px 0;color:var(--muted);font-size:13px}
+
+/* ── ERR BOX ──────────────────────────────────────────────────────── */
+.err-box{
+  background:var(--red-l);border:1px solid #fca5a5;border-radius:8px;
+  padding:9px 12px;font-size:12px;color:var(--red);margin-bottom:14px;
+  font-weight:500;animation:shake .35s cubic-bezier(.36,.07,.19,.97)
+}
+@keyframes shake{0%,100%{transform:none}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+
+/* ── TOAST ────────────────────────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:28px;right:28px;padding:11px 20px;
+  border-radius:10px;border:1px solid;font-size:13px;font-weight:500;
+  box-shadow:0 8px 28px rgba(0,0,0,.12);z-index:200;
+  opacity:0;transform:translateY(16px) scale(.95);
+  transition:opacity .22s,transform .22s cubic-bezier(.34,1.56,.64,1);
+  pointer-events:none;backdrop-filter:blur(10px)
+}
+#toast.show{opacity:1;transform:translateY(0) scale(1)}
+#toast.ok{background:rgba(240,253,244,.95);border-color:#86efac;color:var(--green)}
+#toast.warn{background:rgba(254,242,242,.95);border-color:#fca5a5;color:var(--red)}
+
+/* ── UTILITY ANIMATIONS ───────────────────────────────────────────── */
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(16px)}
+  to{opacity:1;transform:none}
+}
+@keyframes fadeIn{
+  from{opacity:0}to{opacity:1}
+}
+@keyframes popIn{
+  from{opacity:0;transform:scale(.88)}
+  to{opacity:1;transform:scale(1)}
+}
+
+/* ── RIPPLE ───────────────────────────────────────────────────────── */
+.ripple{
+  position:absolute;border-radius:50%;
+  background:rgba(255,255,255,.45);
+  transform:scale(0);animation:rippleAnim .55s linear;
+  pointer-events:none
+}
+@keyframes rippleAnim{to{transform:scale(4);opacity:0}}
+
+/* ── RESPONSIVE ───────────────────────────────────────────────────── */
+@media(max-width:600px){
+  header{padding:12px 16px}
+  main{padding:20px 14px 60px}
+  #stats-strip{padding:12px 16px;gap:14px}
+  #risk-banner{padding:10px 16px}
+  .modal{max-height:95vh;border-radius:14px}
+  .field-row{grid-template-columns:1fr}
+  .orb{filter:blur(90px);opacity:.22}
+}
+</style>
+</head>
+<body>
+
+<!-- ── PARALLAX BACKGROUND ───────────────────────────────────────── -->
+<div id="parallax-bg">
+  <div class="orb orb-1" data-speed="0.03"></div>
+  <div class="orb orb-2" data-speed="0.05"></div>
+  <div class="orb orb-3" data-speed="0.04"></div>
+  <div class="orb orb-4" data-speed="0.06"></div>
+</div>
+<canvas class="dots-canvas" id="dots-canvas"></canvas>
+
+<!-- ── HEADER ────────────────────────────────────────────────────── -->
+<header id="site-header">
+  <div class="logo">
+    <div class="logo-mark">A</div>
+    <div>
+      <div class="logo-text">Attenda</div>
+      <div class="logo-sub">Attendance Tracker</div>
+    </div>
+  </div>
+  <div class="hdr-btns">
+    <button class="btn-ghost" onclick="openModal('holidays-modal')">📅 Holidays</button>
+    <button class="btn-ghost" onclick="openSettingsModal()">⚙ Settings</button>
+    <button class="btn-ghost" onclick="exportCSV()">↓ CSV</button>
+    <button class="btn-ghost" onclick="exportJSON()">↓ JSON</button>
+  </div>
+</header>
+
+<!-- ── STATS STRIP ────────────────────────────────────────────────── -->
+<div id="stats-strip">
+  <div class="stat-pill">
+    <span class="stat-val" id="stat-overall">0%</span>
+    <span class="stat-lbl">Overall</span>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-pill">
+    <span class="stat-val" style="color:var(--blue)" id="stat-subjects">0</span>
+    <span class="stat-lbl">Subjects</span>
+  </div>
+  <div class="stat-pill">
+    <span class="stat-val" id="stat-atrisk">0</span>
+    <span class="stat-lbl">At Risk</span>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-pill">
+    <span class="stat-val" style="color:var(--green)" id="stat-attended">0h</span>
+    <span class="stat-lbl">Attended Hrs</span>
+  </div>
+  <div class="stat-pill">
+    <span class="stat-val" style="color:var(--sub)" id="stat-total">0h</span>
+    <span class="stat-lbl">Total Hrs</span>
+  </div>
+  <div class="stat-divider"></div>
+  <div class="stat-pill">
+    <span class="stat-val" style="color:var(--amber)" id="stat-threshold">75%</span>
+    <span class="stat-lbl">Threshold</span>
+  </div>
+  <div class="stat-pill">
+    <span class="stat-val" style="color:#7c3aed" id="stat-holidays">0</span>
+    <span class="stat-lbl">Holidays</span>
+  </div>
+  <div class="stat-pill" id="stat-nexthol-wrap" style="display:none">
+    <span class="stat-val" style="color:#7c3aed;font-size:14px" id="stat-nexthol">—</span>
+    <span class="stat-lbl">Next Holiday</span>
+  </div>
+</div>
+
+<!-- ── RISK BANNER ────────────────────────────────────────────────── -->
+<div id="risk-banner">
+  <span class="risk-dot"></span>
+  <span id="risk-text"></span>
+</div>
+
+<!-- ── MAIN ──────────────────────────────────────────────────────── -->
+<main>
+  <div class="section-row">
+    <div>
+      <div class="section-title">Your Subjects</div>
+      <div class="section-sub" id="section-sub">Add a subject to get started</div>
+    </div>
+    <button class="btn-primary" onclick="openAddModal()">+ Add Subject</button>
+  </div>
+
+  <div id="empty-state">
+    <span class="icon">📚</span>
+    <h3>No subjects yet</h3>
+    <p>Add your subjects to start tracking attendance hours</p>
+    <button class="btn-primary" onclick="openAddModal()">+ Add Your First Subject</button>
+  </div>
+
+  <div id="card-grid"></div>
+</main>
+
+<!-- ═══════════════════════ MODALS ══════════════════════════════════ -->
+
+<!-- ADD SUBJECT -->
+<div class="overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">Add Subject</span>
+      <button class="modal-close" onclick="closeModal('add-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Subject Name *</label>
+        <input type="text" id="add-name" placeholder="e.g. Operating Systems" oninput="clearAddErr()"/>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Total Hours Scheduled</label>
+          <input type="number" id="add-total" min="0" step="0.5" placeholder="e.g. 40"/>
+        </div>
+        <div class="field">
+          <label>Hours Already Attended</label>
+          <input type="number" id="add-attended" min="0" step="0.5" placeholder="e.g. 20"/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Hours Per Session</label>
+        <input type="number" id="add-session" min="0.5" step="0.5" value="1"/>
+        <div class="hint">e.g. 1 for lectures · 1.5 for 90-min labs</div>
+      </div>
+      <div class="err-box" id="add-err" style="display:none"></div>
+      <div class="form-btns">
+        <button class="btn-primary" onclick="submitAdd()">Add Subject</button>
+        <button class="btn-ghost" onclick="closeModal('add-modal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT SUBJECT -->
+<div class="overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">Edit Subject</span>
+      <button class="modal-close" onclick="closeModal('edit-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id"/>
+      <div class="field">
+        <label>Subject Name *</label>
+        <input type="text" id="edit-name"/>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Total Hours Scheduled</label>
+          <input type="number" id="edit-total" min="0" step="0.5"/>
+        </div>
+        <div class="field">
+          <label>Hours Attended</label>
+          <input type="number" id="edit-attended" min="0" step="0.5"/>
+          <div class="warn" id="edit-clamp-warn" style="display:none">⚠ Will be clamped to total</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Hours Per Session</label>
+        <input type="number" id="edit-session" min="0.5" step="0.5"/>
+      </div>
+      <div class="form-btns">
+        <button class="btn-primary" onclick="submitEdit()">Save Changes</button>
+        <button class="btn-ghost" onclick="closeModal('edit-modal')">Cancel</button>
+      </div>
+      <div class="form-sep">
+        <div id="del-confirm" style="display:none">
+          <div class="form-btns">
+            <button class="btn-danger" onclick="confirmDelete()">Confirm Delete</button>
+            <button class="btn-ghost" onclick="cancelDelete()">Cancel</button>
+          </div>
+        </div>
+        <button class="btn-danger" id="del-btn" onclick="showDeleteConfirm()">Delete Subject</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HOLIDAYS -->
+<div class="overlay" id="holidays-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">Holidays</span>
+      <button class="modal-close" onclick="closeModal('holidays-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="holiday-add">
+        <input type="date" id="hol-date"/>
+        <input type="text" id="hol-label" placeholder="Label (e.g. Diwali)"/>
+        <button class="btn-primary" onclick="addHoliday()">Add</button>
+      </div>
+      <div id="holiday-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div class="overlay" id="settings-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title">Settings</span>
+      <button class="modal-close" onclick="closeModal('settings-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Minimum Attendance Threshold (%)</label>
+        <input type="number" id="settings-threshold" min="1" max="99"/>
+        <div class="hint">Subjects below this % are flagged at risk. (1–99%)</div>
+      </div>
+      <div class="form-btns">
+        <button class="btn-primary" onclick="saveSettings()">Save Settings</button>
+        <button class="btn-ghost" onclick="closeModal('settings-modal')">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════════════════
+   STATE
+   ════════════════════════════════════════════════════════════════════ */
+const KEY = "attenda_v2";
+let state = { threshold:75, subjects:[], holidays:[] };
+
+function load() {
+  try { const r = localStorage.getItem(KEY); if (r) state = JSON.parse(r); } catch(e) {}
+}
+function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
+
+/* ════════════════════════════════════════════════════════════════════
+   MATH
+   ════════════════════════════════════════════════════════════════════ */
+function pct(a, t)       { return t===0 ? 0 : Math.round(a/t*1000)/10; }
+function r2(n)            { return Math.round(n*100)/100; }
+function clamp(v,lo,hi)   { return Math.max(lo,Math.min(hi,v)); }
+
+function advice(a, t, th) {
+  const pc = pct(a, t);
+  if (th >= 100) {
+    if (pc >= 100) return { ok:true,  label:"Perfect attendance" };
+    return            { ok:false, label:"Must attend all remaining hours" };
+  }
+  if (pc >= th) {
+    const b = Math.max(0, Math.floor((100*a - th*t) / th));
+    return { ok:true,  label: b===0 ? "At threshold — attend next session" : `Can miss ${b} more hr${b!==1?"s":""}` };
+  }
+  const n = Math.max(0, Math.ceil((th*t - 100*a) / (100-th)));
+  return { ok:false, label: n===0 ? "Attend all upcoming hours" : `Need ${n} more hr${n!==1?"s":""}` };
+}
+
+function statusColor(pc, th) {
+  if (pc >= th)      return "#16a34a";
+  if (pc >= th - 10) return "#d97706";
+  return "#dc2626";
+}
+function bgColor(pc, th) {
+  if (pc >= th)      return "#f0fdf4";
+  if (pc >= th - 10) return "#fffbeb";
+  return "#fef2f2";
+}
+function borderColor(pc, th) {
+  if (pc >= th)      return "#86efac";
+  if (pc >= th - 10) return "#fcd34d";
+  return "#fca5a5";
+}
+
+function uid() { return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+/* ════════════════════════════════════════════════════════════════════
+   PARALLAX
+   ════════════════════════════════════════════════════════════════════ */
+let mouseX = window.innerWidth/2, mouseY = window.innerHeight/2;
+let scrollY = 0;
+
+document.addEventListener("mousemove", e => { mouseX = e.clientX; mouseY = e.clientY; });
+window.addEventListener("scroll", () => { scrollY = window.scrollY; }, {passive:true});
+
+function tickParallax() {
+  const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+  document.querySelectorAll(".orb[data-speed]").forEach(orb => {
+    const sp = parseFloat(orb.dataset.speed);
+    const dx = (mouseX - cx) * sp;
+    const dy = (mouseY - cy) * sp + scrollY * sp * 0.4;
+    orb.style.transform = `translate(${dx}px, ${dy}px)`;
+  });
+  requestAnimationFrame(tickParallax);
+}
+tickParallax();
+
+/* ── Floating dots canvas ── */
+(function initDots() {
+  const canvas = document.getElementById("dots-canvas");
+  const ctx    = canvas.getContext("2d");
+  let dots = [];
+
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener("resize", resize);
+
+  function createDots() {
+    dots = [];
+    const n = Math.floor((window.innerWidth * window.innerHeight) / 14000);
+    for (let i = 0; i < n; i++) {
+      dots.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.8 + .4,
+        vx: (Math.random() - .5) * .22,
+        vy: (Math.random() - .5) * .22,
+        color: ["#2563eb","#7c3aed","#06b6d4","#16a34a"][Math.floor(Math.random()*4)]
+      });
+    }
+  }
+  createDots();
+  window.addEventListener("resize", createDots);
+
+  function drawDots() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    dots.forEach(d => {
+      d.x += d.vx; d.y += d.vy;
+      if (d.x < 0) d.x = canvas.width;
+      if (d.x > canvas.width) d.x = 0;
+      if (d.y < 0) d.y = canvas.height;
+      if (d.y > canvas.height) d.y = 0;
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
+      ctx.fillStyle = d.color;
+      ctx.fill();
+    });
+    requestAnimationFrame(drawDots);
+  }
+  drawDots();
+})();
+
+/* ── Header scroll shadow ── */
+window.addEventListener("scroll", () => {
+  document.getElementById("site-header").classList.toggle("scrolled", window.scrollY > 10);
+}, {passive:true});
+
+/* ── Scroll-triggered card entrance ── */
+const IO = new IntersectionObserver(entries => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      const card = entry.target;
+      const delay = (parseInt(card.dataset.index||0) % 6) * 60;
+      setTimeout(() => card.classList.add("visible"), delay);
+      IO.unobserve(card);
+    }
+  });
+}, { threshold: 0.08 });
+
+/* ── Ripple effect on primary buttons ── */
+document.addEventListener("click", e => {
+  const btn = e.target.closest(".btn-present, .btn-absent, .btn-primary");
+  if (!btn) return;
+  const rect = btn.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height) * 1.5;
+  const rip  = document.createElement("span");
+  rip.className = "ripple";
+  Object.assign(rip.style, {
+    width: size+"px", height: size+"px",
+    left: (e.clientX - rect.left - size/2)+"px",
+    top:  (e.clientY - rect.top  - size/2)+"px"
+  });
+  btn.style.position = "relative";
+  btn.appendChild(rip);
+  rip.addEventListener("animationend", () => rip.remove());
+});
+
+/* ════════════════════════════════════════════════════════════════════
+   ANIMATED STAT COUNTER
+   ════════════════════════════════════════════════════════════════════ */
+const prevStats = {};
+function animateStat(id, newText, color) {
+  const el_ = el(id);
+  if (!el_) return;
+  if (prevStats[id] === newText) { if (color) el_.style.color = color; return; }
+  prevStats[id] = newText;
+  el_.textContent = newText;
+  if (color) el_.style.color = color;
+  el_.classList.remove("bump");
+  void el_.offsetWidth; // reflow
+  el_.classList.add("bump");
+  setTimeout(() => el_.classList.remove("bump"), 300);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   RENDER
+   ════════════════════════════════════════════════════════════════════ */
+function render() {
+  const subs = state.subjects, hols = state.holidays, th = state.threshold;
+  const totalA  = subs.reduce((a,s)=>a+s.attendedHrs, 0);
+  const totalT  = subs.reduce((a,s)=>a+s.totalHrs, 0);
+  const overall = pct(totalA, totalT);
+  const atRisk  = subs.filter(s=>pct(s.attendedHrs,s.totalHrs)<th).length;
+  const today   = new Date().toISOString().slice(0,10);
+  const nextHol = hols.find(h=>h.date>=today);
+
+  /* stats strip */
+  const strip = el("stats-strip");
+  const wasHidden = strip.style.display === "none" || !strip.style.display;
+  strip.style.display = subs.length ? "flex" : "none";
+  if (subs.length && wasHidden) strip.style.animation = "slideDown .4s ease both";
+
+  animateStat("stat-overall",   overall.toFixed(1)+"%", statusColor(overall,th));
+  animateStat("stat-subjects",  String(subs.length));
+  animateStat("stat-atrisk",    String(atRisk), atRisk>0?"#dc2626":"#16a34a");
+  animateStat("stat-attended",  r2(totalA)+"h");
+  animateStat("stat-total",     r2(totalT)+"h");
+  animateStat("stat-threshold", th+"%");
+  animateStat("stat-holidays",  String(hols.length));
+
+  const nw = el("stat-nexthol-wrap");
+  if (nextHol) { nw.style.display="flex"; el("stat-nexthol").textContent=nextHol.date.slice(5)+" · "+nextHol.label; }
+  else nw.style.display="none";
+
+  /* risk banner */
+  const banner = el("risk-banner");
+  if (atRisk > 0) {
+    banner.style.display="flex";
+    el("risk-text").textContent=`${atRisk} subject${atRisk>1?"s":""} below ${th}% — immediate attendance required`;
+  } else banner.style.display="none";
+
+  /* section subtitle */
+  el("section-sub").textContent = subs.length===0
+    ? "Add a subject to get started"
+    : `${subs.length} subject${subs.length!==1?"s":""} tracked`;
+
+  el("empty-state").style.display = subs.length ? "none" : "block";
+  el("card-grid").style.display   = subs.length ? "grid" : "none";
+
+  /* rebuild cards */
+  const grid = el("card-grid");
+  grid.innerHTML = "";
+  subs.forEach((s,i) => {
+    const card = buildCard(s, th, i);
+    grid.appendChild(card);
+    IO.observe(card);
+  });
+
+  renderHolidays();
+  save();
+}
+
+function buildCard(sub, th, idx) {
+  const pc  = pct(sub.attendedHrs, sub.totalHrs);
+  const adv = advice(sub.attendedHrs, sub.totalHrs, th);
+  const col = statusColor(pc, th);
+  const bg  = bgColor(pc, th);
+  const bdr = borderColor(pc, th);
+  const thP = clamp(th, 0, 100);
+
+  const card = document.createElement("div");
+  card.className  = "sub-card";
+  card.dataset.id    = sub.id;
+  card.dataset.index = idx;
+
+  card.innerHTML = `
+    <div class="card-header">
+      <span class="card-name">${esc(sub.name)}</span>
+      <div class="card-actions">
+        <button class="btn-icon" title="Edit" onclick="openEditModal('${sub.id}')">✏</button>
+        <button class="btn-icon red" id="del-start-${sub.id}" onclick="startCardDelete('${sub.id}')">🗑</button>
+        <button class="btn-icon green" id="del-ok-${sub.id}" style="display:none" onclick="doCardDelete('${sub.id}')">✓</button>
+        <button class="btn-icon" id="del-cancel-${sub.id}" style="display:none" onclick="cancelCardDelete('${sub.id}')">✗</button>
+      </div>
+    </div>
+
+    <div class="pct-row">
+      <div class="pct-badge" style="background:${bg}">
+        <span class="pct-num" style="color:${col}">${pc.toFixed(1)}</span>
+        <span class="pct-sym" style="color:${col}">%</span>
+      </div>
+      <div class="hrs-info">
+        <div class="hrs-val">
+          <span class="attended">${r2(sub.attendedHrs)}</span>
+          <span class="sep"> / </span>
+          <span class="total">${r2(sub.totalHrs)}</span>
+          <span class="unit">hrs</span>
+        </div>
+        <div class="hrs-sub">attended / scheduled</div>
+      </div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-bar" style="width:${Math.min(pc,100)}%;background:${col}"></div>
+      <div class="progress-marker" style="left:${thP}%" title="${th}% threshold"></div>
+    </div>
+
+    <div class="advice-pill" style="background:${bg};border-color:${bdr};color:${col}">
+      ${adv.ok ? "✅" : "⚠️"} ${adv.label}
+    </div>
+
+    <div class="custom-hrs-row">
+      <span class="custom-hrs-label">Hours to log:</span>
+      <div class="custom-hrs-controls">
+        <button class="step-btn" onclick="stepHrs('${sub.id}',-0.5)">−</button>
+        <input class="hrs-input" type="number" min="0.5" step="0.5"
+          id="hrs-inp-${sub.id}" value="${sub.sessionHrs}"
+          onchange="onHrsChange('${sub.id}')" oninput="onHrsChange('${sub.id}')"/>
+        <span class="hrs-unit">h</span>
+        <button class="step-btn" onclick="stepHrs('${sub.id}',0.5)">+</button>
+      </div>
+      <button class="reset-btn" id="hrs-reset-${sub.id}" onclick="resetHrs('${sub.id}',${sub.sessionHrs})">reset</button>
+    </div>
+
+    <div class="card-btns">
+      <button class="btn-present" id="btn-p-${sub.id}" onclick="markPresent('${sub.id}')">✓ Present +${sub.sessionHrs}h</button>
+      <button class="btn-absent"  id="btn-a-${sub.id}" onclick="markAbsent('${sub.id}')">✗ Absent +${sub.sessionHrs}h</button>
+    </div>`;
+  return card;
+}
+
+function renderHolidays() {
+  const list = el("holiday-list");
+  if (!state.holidays.length) {
+    list.innerHTML = '<div class="holiday-empty">No holidays recorded yet</div>';
+    return;
+  }
+  list.innerHTML = state.holidays.map(h => `
+    <div class="holiday-item">
+      <span class="holiday-date">${esc(h.date)}</span>
+      <span class="holiday-label">${esc(h.label)}</span>
+      <button class="btn-icon red" onclick="deleteHoliday('${h.id}')">✕</button>
+    </div>`).join("");
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   CARD ACTIONS
+   ════════════════════════════════════════════════════════════════════ */
+function getCurrentHrs(id) {
+  const inp = el("hrs-inp-"+id);
+  return inp ? r2(Math.max(0.5, +inp.value || 1)) : 1;
+}
+
+function markPresent(id) {
+  const h = getCurrentHrs(id);
+  const s = state.subjects.find(s=>s.id===id); if (!s) return;
+  s.totalHrs    = r2(s.totalHrs    + h);
+  s.attendedHrs = r2(s.attendedHrs + h);
+  render();
+  toast(`✓ +${h}h marked present`);
+}
+
+function markAbsent(id) {
+  const h = getCurrentHrs(id);
+  const s = state.subjects.find(s=>s.id===id); if (!s) return;
+  s.totalHrs = r2(s.totalHrs + h);
+  render();
+  toast(`✗ +${h}h marked absent`, true);
+}
+
+function stepHrs(id, delta) {
+  const inp = el("hrs-inp-"+id);
+  inp.value = String(r2(Math.max(0.5,(+inp.value||1)+delta)));
+  onHrsChange(id);
+}
+
+function onHrsChange(id) {
+  const sub = state.subjects.find(s=>s.id===id); if (!sub) return;
+  const inp  = el("hrs-inp-"+id);
+  const v    = r2(Math.max(0.5, +inp.value || sub.sessionHrs));
+  const rst  = el("hrs-reset-"+id);
+  const btnP = el("btn-p-"+id);
+  const btnA = el("btn-a-"+id);
+  if (rst)  rst.style.display  = v!==sub.sessionHrs ? "inline" : "none";
+  if (btnP) btnP.textContent   = `✓ Present +${v}h`;
+  if (btnA) btnA.textContent   = `✗ Absent +${v}h`;
+}
+
+function resetHrs(id, def) {
+  const inp = el("hrs-inp-"+id);
+  if (inp) { inp.value = String(def); onHrsChange(id); }
+}
+
+function startCardDelete(id) {
+  el("del-start-"+id).style.display="none";
+  el("del-ok-"+id).style.display="inline";
+  el("del-cancel-"+id).style.display="inline";
+}
+function cancelCardDelete(id) {
+  el("del-start-"+id).style.display="inline";
+  el("del-ok-"+id).style.display="none";
+  el("del-cancel-"+id).style.display="none";
+}
+function doCardDelete(id) {
+  const s = state.subjects.find(s=>s.id===id);
+  state.subjects = state.subjects.filter(s=>s.id!==id);
+  render(); toast(`"${s?.name||""}" removed`, true);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ADD MODAL
+   ════════════════════════════════════════════════════════════════════ */
+function openAddModal() {
+  el("add-name").value=""; el("add-total").value="";
+  el("add-attended").value=""; el("add-session").value="1";
+  el("add-err").style.display="none";
+  openModal("add-modal");
+  setTimeout(()=>el("add-name").focus(),200);
+}
+function clearAddErr() { el("add-err").style.display="none"; }
+function submitAdd() {
+  const name=el("add-name").value.trim();
+  if (!name) {
+    el("add-err").textContent="Subject name is required.";
+    el("add-err").style.display="block"; return;
+  }
+  const total    = clamp(+el("add-total").value||0,0,99999);
+  const attended = clamp(+el("add-attended").value||0,0,total);
+  const session  = Math.max(0.5,+el("add-session").value||1);
+  state.subjects.push({id:uid(),name,totalHrs:total,attendedHrs:attended,sessionHrs:r2(session)});
+  closeModal("add-modal"); render(); toast(`"${name}" added`);
+}
+document.getElementById("add-modal").addEventListener("keydown",e=>{if(e.key==="Enter")submitAdd();});
+
+/* ════════════════════════════════════════════════════════════════════
+   EDIT MODAL
+   ════════════════════════════════════════════════════════════════════ */
+function openEditModal(id) {
+  const s=state.subjects.find(s=>s.id===id); if(!s)return;
+  el("edit-id").value=id; el("edit-name").value=s.name;
+  el("edit-total").value=s.totalHrs; el("edit-attended").value=s.attendedHrs;
+  el("edit-session").value=s.sessionHrs;
+  el("edit-clamp-warn").style.display="none";
+  el("del-confirm").style.display="none"; el("del-btn").style.display="block";
+  openModal("edit-modal"); setTimeout(()=>el("edit-name").focus(),200);
+  el("edit-attended").oninput=()=>{
+    const t=+el("edit-total").value||0, a=+el("edit-attended").value||0;
+    el("edit-clamp-warn").style.display=a>t?"block":"none";
+  };
+}
+function submitEdit() {
+  const id=el("edit-id").value, name=el("edit-name").value.trim(); if(!name)return;
+  const total=clamp(+el("edit-total").value||0,0,99999);
+  const attended=clamp(+el("edit-attended").value||0,0,total);
+  const session=Math.max(0.5,+el("edit-session").value||1);
+  const s=state.subjects.find(s=>s.id===id); if(!s)return;
+  s.name=name; s.totalHrs=total; s.attendedHrs=attended; s.sessionHrs=r2(session);
+  closeModal("edit-modal"); render(); toast("Subject updated");
+}
+function showDeleteConfirm(){el("del-btn").style.display="none";el("del-confirm").style.display="block";}
+function cancelDelete(){el("del-btn").style.display="block";el("del-confirm").style.display="none";}
+function confirmDelete(){
+  const id=el("edit-id").value, s=state.subjects.find(s=>s.id===id);
+  state.subjects=state.subjects.filter(s=>s.id!==id);
+  closeModal("edit-modal"); render(); toast(`"${s?.name||""}" removed`,true);
+}
+document.getElementById("edit-modal").addEventListener("keydown",e=>{if(e.key==="Enter")submitEdit();});
+
+/* ════════════════════════════════════════════════════════════════════
+   HOLIDAYS
+   ════════════════════════════════════════════════════════════════════ */
+function addHoliday(){
+  const date=el("hol-date").value, label=el("hol-label").value.trim()||"Holiday";
+  if(!date)return;
+  state.holidays.push({id:uid(),date,label});
+  state.holidays.sort((a,b)=>a.date>b.date?1:-1);
+  el("hol-date").value=""; el("hol-label").value=""; render();
+}
+function deleteHoliday(id){ state.holidays=state.holidays.filter(h=>h.id!==id); render(); }
+document.getElementById("hol-label").addEventListener("keydown",e=>{if(e.key==="Enter")addHoliday();});
+
+/* ════════════════════════════════════════════════════════════════════
+   SETTINGS
+   ════════════════════════════════════════════════════════════════════ */
+function openSettingsModal(){ el("settings-threshold").value=state.threshold; openModal("settings-modal"); }
+function saveSettings(){
+  state.threshold=clamp(+el("settings-threshold").value||75,1,99);
+  closeModal("settings-modal"); render(); toast("Settings saved");
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   EXPORT
+   ════════════════════════════════════════════════════════════════════ */
+function exportCSV(){
+  const th=state.threshold;
+  const rows=[["Subject","Attended Hrs","Total Hrs","Percentage","Status","Advice"]];
+  state.subjects.forEach(s=>{
+    const pc=pct(s.attendedHrs,s.totalHrs), adv=advice(s.attendedHrs,s.totalHrs,th);
+    rows.push([s.name,s.attendedHrs,s.totalHrs,pc.toFixed(1)+"%",pc>=th?"Safe":"At Risk",adv.label]);
+  });
+  dlBlob(rows.map(r=>r.map(c=>`"${c}"`).join(",")).join("\n"),"attendance.csv","text/csv");
+}
+function exportJSON(){
+  dlBlob(JSON.stringify({...state,exportedAt:new Date().toISOString()},null,2),"attendance.json","application/json");
+}
+function dlBlob(content,name,type){
+  const a=Object.assign(document.createElement("a"),{href:URL.createObjectURL(new Blob([content],{type})),download:name});
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   MODAL HELPERS
+   ════════════════════════════════════════════════════════════════════ */
+function openModal(id){
+  el(id).classList.add("open");
+  document.body.style.overflow="hidden";
+}
+function closeModal(id){
+  const ov=el(id);
+  ov.classList.remove("open");
+  document.body.style.overflow="";
+}
+document.querySelectorAll(".overlay").forEach(ov=>{
+  ov.addEventListener("click",e=>{ if(e.target===ov) closeModal(ov.id); });
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape")
+    document.querySelectorAll(".overlay.open").forEach(ov=>closeModal(ov.id));
+});
+
+/* ════════════════════════════════════════════════════════════════════
+   TOAST
+   ════════════════════════════════════════════════════════════════════ */
+let toastTimer=null;
+function toast(msg,warn=false){
+  const t=el("toast");
+  t.textContent=msg;
+  t.className="show "+(warn?"warn":"ok");
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove("show"),2400);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   UTILS
+   ════════════════════════════════════════════════════════════════════ */
+function el(id){ return document.getElementById(id); }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+/* ════════════════════════════════════════════════════════════════════
+   INIT
+   ════════════════════════════════════════════════════════════════════ */
+load();
+render();
+</script>
+</body>
+</html>
