@@ -44,6 +44,11 @@ label{display:block;font-size:13px;color:var(--mute);margin-bottom:4px}
 .tools{display:flex;gap:8px;margin:16px 0 0;flex-wrap:wrap}
 .toast{min-height:20px;font-size:13px;color:var(--mute);margin-top:8px}
 h2{font-size:16px;margin:20px 0 8px}
+textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);font:13px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink);resize:vertical}
+textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input[type=radio]{width:auto;margin:4px 0 0;accent-color:var(--accent)}
+label.opt{display:flex;gap:10px;align-items:flex-start;font-size:15px;color:var(--ink);border:1px solid var(--line);background:var(--card);border-radius:8px;padding:10px 12px;margin:8px 0 0;cursor:pointer}
+label.opt:has(input:checked){border-color:var(--accent)}
 </style>
 </head>
 <body>
@@ -62,6 +67,23 @@ h2{font-size:16px;margin:20px 0 8px}
 
   <h2>Members</h2>
   <div id="list"></div>
+
+  <div class="tools"><button id="showjson" aria-expanded="false" aria-controls="jsonbox">Show JSON</button></div>
+  <div id="jsonbox" hidden>
+  <h2>Import / Export (JSON)</h2>
+  <label for="json">Paste JSON</label>
+  <textarea id="json" rows="6" spellcheck="false" placeholder='{"members":[{"name":"Amit","payments":[{"amount":2000}]}]}'></textarea>
+  <div style="margin-top:8px"><label for="file">...or choose a .json file</label><input id="file" type="file" accept=".json,application/json"></div>
+  <div role="radiogroup" aria-label="Import mode">
+    <label class="opt"><input type="radio" name="mode" value="add" checked><span><b>Add new</b><br><span class="sub">Keep the current list and add the imported members and payments</span></span></label>
+    <label class="opt"><input type="radio" name="mode" value="replace"><span><b>Remove all and add new</b><br><span class="sub">Delete the current list first, then import</span></span></label>
+  </div>
+  <div class="tools" style="margin-top:10px">
+    <button class="primary" id="imp">Import</button>
+    <button id="sample">Fill sample</button>
+    <button id="exp">Show current as JSON text</button>
+  </div>
+  </div>
 
   <div class="tools">
     <button id="copy">Copy summary</button>
@@ -186,21 +208,132 @@ function summaryText(){
   });
   return L.join("\n");
 }
-$("copy").addEventListener("click",function(){
-  var t=summaryText();
+function copyText(t,okMsg){
   function fallback(){
     try{var ta=document.createElement("textarea");ta.value=t;ta.style.position="fixed";ta.style.opacity="0";
       document.body.appendChild(ta);ta.select();var ok=document.execCommand("copy");document.body.removeChild(ta);
-      toast(ok?"Summary copied.":"Copy failed. Select and copy manually.")}catch(e){toast("Copy failed.")}
+      toast(ok?okMsg:"Copy failed. Select and copy manually.")}catch(e){toast("Copy failed.")}
   }
   if(navigator.clipboard&&navigator.clipboard.writeText){
-    navigator.clipboard.writeText(t).then(function(){toast("Summary copied.")},fallback);
+    navigator.clipboard.writeText(t).then(function(){toast(okMsg)},fallback);
   }else fallback();
-});
+}
+$("copy").addEventListener("click",function(){copyText(summaryText(),"Summary copied.")});
 $("reset").addEventListener("click",function(){
   if(this.dataset.armed!=="1"){this.dataset.armed="1";this.textContent="Tap again to erase everything";return}
   S={name:"Tour fund",perHead:0,members:[]};open=null;armed=null;save();
   this.dataset.armed="";this.textContent="Clear all data";init();toast("All data cleared.");
+});
+
+/* ---------- JSON import / export (amounts in rupees in JSON) ---------- */
+var impArmed=false;
+function resetArm(){impArmed=false;$("imp").textContent="Import"}
+function mode(){return document.querySelector('input[name="mode"]:checked').value}
+function clean(s,n){return String(s==null?"":s).trim().slice(0,n)}
+function validDate(d){return typeof d==="string"&&/^\d{4}-\d{2}-\d{2}$/.test(d)?d:today()}
+function pkey(p){return p.amt+"|"+p.date+"|"+p.note}
+
+// Accepts: [members] or {name, perHead, members:[...]}.
+// Member: "Name" | {name, paid, payments:[number | {amount, date, note}]}
+function parseImport(text){
+  var data;
+  try{data=JSON.parse(text)}catch(e){throw new Error("Invalid JSON: "+e.message)}
+  var isArr=Array.isArray(data);
+  var list=isArr?data:(data&&Array.isArray(data.members)?data.members:null);
+  if(!list)throw new Error('Expected a list of members or an object with a "members" list.');
+  var out={name:null,perHead:null,members:[],skipped:0};
+  if(!isArr){
+    if(typeof data.name==="string"&&data.name.trim())out.name=clean(data.name,60);
+    var ph=toP(data.perHead);if(ph)out.perHead=ph;
+  }
+  list.forEach(function(it){
+    if(typeof it==="string")it={name:it};
+    if(!it||typeof it!=="object"){out.skipped++;return}
+    var name=clean(it.name,60);
+    if(!name){out.skipped++;return}
+    var pays=[];
+    if(Array.isArray(it.payments))it.payments.forEach(function(p){
+      if(typeof p==="number"||typeof p==="string")p={amount:p};
+      var a=p&&typeof p==="object"?toP(p.amount!=null?p.amount:p.amt):0;
+      if(!a){out.skipped++;return}
+      pays.push({id:uid(),amt:a,date:validDate(p.date),note:clean(p.note,80)});
+    });
+    var quick=toP(it.paid);
+    if(quick)pays.push({id:uid(),amt:quick,date:today(),note:"Imported"});
+    out.members.push({name:name,payments:pays});
+  });
+  if(!out.members.length)throw new Error("No valid members found.");
+  return out;
+}
+
+function applyImport(imp,replace){
+  var pre={};
+  if(replace)S.members=[];
+  else S.members.forEach(function(m){pre[m.id]=m.payments.map(pkey)});
+  if(imp.name&&(replace||S.name==="Tour fund"))S.name=imp.name;
+  if(imp.perHead&&(replace||!S.perHead))S.perHead=imp.perHead;
+  var addedM=0,addedP=0,dup=0;
+  imp.members.forEach(function(im){
+    var m=S.members.filter(function(x){return x.name.toLowerCase()===im.name.toLowerCase()})[0];
+    if(!m){m={id:uid(),name:im.name,payments:[]};S.members.push(m);addedM++}
+    im.payments.forEach(function(p){
+      // Skip payments already present before this import (safe to re-import the same JSON).
+      if(pre[m.id]&&pre[m.id].indexOf(pkey(p))>-1){dup++;return}
+      m.payments.push(p);addedP++;
+    });
+  });
+  open=null;armed=null;save();init();
+  return {addedM:addedM,addedP:addedP,dup:dup};
+}
+
+$("imp").addEventListener("click",function(){
+  var text=$("json").value.trim();
+  if(!text){toast("Paste JSON or choose a file first.");return}
+  var imp;
+  try{imp=parseImport(text)}catch(e){resetArm();toast(e.message);return}
+  var replace=mode()==="replace";
+  if(replace&&S.members.length&&!impArmed){
+    impArmed=true;this.textContent="Tap again: remove all & import";
+    toast("This deletes the current "+S.members.length+" members first.");return;
+  }
+  var r=applyImport(imp,replace);
+  resetArm();$("json").value="";
+  toast((replace?"List replaced. ":"")+"Added "+r.addedM+" members, "+r.addedP+" payments"+
+    (r.dup?", "+r.dup+" duplicate payments skipped":"")+(imp.skipped?", "+imp.skipped+" invalid entries ignored":"")+".");
+});
+$("json").addEventListener("input",resetArm);
+Array.prototype.forEach.call(document.querySelectorAll('input[name="mode"]'),function(r){r.addEventListener("change",resetArm)});
+
+$("file").addEventListener("change",function(){
+  var f=this.files&&this.files[0];if(!f)return;
+  if(f.size>2000000){toast("File too large (max 2 MB).");this.value="";return}
+  var rd=new FileReader();
+  rd.onload=function(){$("json").value=String(rd.result);resetArm();toast("File loaded. Pick an option and tap Import.")};
+  rd.onerror=function(){toast("Could not read the file.")};
+  rd.readAsText(f);this.value="";
+});
+
+$("sample").addEventListener("click",function(){
+  $("json").value=JSON.stringify({name:"Goa Trip",perHead:5000,members:[
+    {name:"Amit",payments:[{amount:2000,date:today(),note:"UPI"}]},
+    {name:"Riya",paid:5000},
+    {name:"Sam"}]},null,2);
+  resetArm();
+});
+$("exp").addEventListener("click",function(){
+  var data={name:S.name,perHead:S.perHead/100,members:S.members.map(function(m){
+    return {name:m.name,payments:m.payments.map(function(p){return {amount:p.amt/100,date:p.date,note:p.note}})}})};
+  var t=JSON.stringify(data,null,2);
+  $("json").value=t;resetArm();
+  copyText(t,"JSON shown in the box above and copied.");
+});
+
+$("showjson").addEventListener("click",function(){
+  var box=$("jsonbox"),show=box.hidden;
+  box.hidden=!show;
+  this.textContent=show?"Hide JSON":"Show JSON";
+  this.setAttribute("aria-expanded",String(show));
+  if(show)box.scrollIntoView({behavior:"smooth",block:"nearest"});
 });
 
 function init(){
